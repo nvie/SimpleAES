@@ -1,4 +1,4 @@
-### SimpleAES
+## SimpleAES
 
 AES-256 encryption and decryption in Python for mere mortals.
 
@@ -20,7 +20,7 @@ one and store it safe.
 Cipher block length is not configurable.  It only uses AES-256.
 
 
-## Be warned!
+### Be warned!
 
 Only every use this library for encrypting/decrypting relatively *small pieces
 of text* (compared to available memory, that is).  It holds both the input and
@@ -28,7 +28,7 @@ output strings in memory for the full length of the algorithm, so memory peaks
 may be an issue when used on large input strings.
 
 
-### Installation
+## Installation
 
 The usual stuff.
 
