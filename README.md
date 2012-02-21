@@ -1,8 +1,12 @@
 ## SimpleAES
 
-AES-256 encryption and decryption in Python for mere mortals.
+[AES-256](http://en.wikipedia.org/wiki/Advanced_Encryption_Standard) encryption
+and decryption in Python for mere mortals.
 
-Here's how simple it is.
+AES is a _symmetric_ encryption algorithm, meaning you use the same key to
+encrypt and decrypt the data later on.
+
+Here's how simple it is:
 
     >>> from SimpleAES import SimpleAES
     >>> key = 'Some arbitrary bytestring.'  # Store this somewhere safe
@@ -14,10 +18,15 @@ Here's how simple it is.
     >>> plaintext
     'My secret plaintext data'
 
-You can use arbitrarily long keys.  Use a good random generator to generate
-one and store it safe.
 
-Cipher block length is not configurable.  It only uses AES-256.
+### Details
+
+You can use arbitrarily long keys.  Use a good random generator to generate one
+and store it safe.  _(For the technically inclined: a 256-bit hash is calculated
+from the input key and forms the actual encryption key.)_
+
+AES has a fixed block length (128 bits) and supports variable key sizes, but
+this library always uses AES-256, meaning 256-bit key sizes.
 
 
 ### Be warned!
