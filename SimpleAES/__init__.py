@@ -1,6 +1,7 @@
 import random
 import hashlib
 import struct
+import base64
 from StringIO import StringIO
 from Crypto.Cipher import AES
 from .version import VERSION
@@ -40,16 +41,16 @@ class SimpleAES(object):
                 elif chunk_len % 16 != 0:
                     chunk += _random_noise(16 - chunk_len % 16)
                 fout.write(aes.encrypt(chunk))
-            ciphertext = fout.getvalue()
+            cipherbytes = fout.getvalue()
         finally:
             fin.close()
             fout.close()
 
-        return ciphertext
+        return cipherbytes
 
-    def decrypt(self, ciphertext):
+    def decrypt(self, cipherbytes):
         """Decrypts a string using AES-256."""
-        fin = StringIO(ciphertext)
+        fin = StringIO(cipherbytes)
         fout = StringIO()
 
         try:
@@ -72,6 +73,19 @@ class SimpleAES(object):
             fout.close()
 
         return text
+
+    def base64_encrypt(self, string):
+        """Encrypts a string using AES-256, but returns the result
+        base64-encoded."""
+        cipherbytes = self.encrypt(string)
+        ciphertext = base64.b64encode(cipherbytes)
+        return ciphertext
+
+    def base64_decrypt(self, ciphertext):
+        """Decrypts base64-encoded ciphertext using AES-256."""
+        cipherbytes = base64.b64decode(ciphertext)
+        plaintext = self.decrypt(cipherbytes)
+        return plaintext
 
 
 __all__ = ['SimpleAES']
