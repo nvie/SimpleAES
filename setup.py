@@ -1,7 +1,6 @@
 """
 SimpleAES: Encryption and decryption for mere mortals.
 """
-import sys
 import os
 from setuptools import setup
 
@@ -21,7 +20,7 @@ setup(
     url='https://github.com/nvie/SimpleAES',
     license='BSD',
     author='Vincent Driessen',
-    author_email='vincent@3rdcloud.com',
+    author_email='me@nvie.com',
     description='SimpleAES: encryption and decryption for mere mortals.',
     long_description=__doc__,
     packages=['SimpleAES'],

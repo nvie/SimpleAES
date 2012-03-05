@@ -6,8 +6,11 @@ from StringIO import StringIO
 from Crypto.Cipher import AES
 from .version import VERSION
 
-__author__ = 'Vincent Driessen <me@nvie.com>'
+__title__ = 'SimpleAES'
 __version__ = VERSION
+__author__ = 'Vincent Driessen'
+__license__ = 'BSD'
+__copyright__ = 'Copyright 2012 Vincent Driessen'
 
 
 def _random_noise(len):
