@@ -8,22 +8,52 @@ encrypt and decrypt the data later on.
 
 Here's how simple it is:
 
-    >>> from SimpleAES import SimpleAES
-    >>> key = 'Some arbitrary bytestring.'  # Store this somewhere safe
-    >>> aes = SimpleAES(key)
-    >>> ciphertext = aes.encrypt('My secret plaintext data')
-    >>> ciphertext
-    '\x18\x00\x00\x00\x00\x00\x00\x00\xaf\xbal\xa0\xb5\xa3\x18?\xc6\x13\xb3\x1bjS\xa6;\x80z\xca(\x8cls\n3&\xa3\x93\x86\xf4\xf6\x08\xe8y\x05V\xa7\xc2\x1d\x03G\xff\x9fS\x80\xf5\x1b\x05'
-    >>> plaintext = aes.decrypt(ciphertext)
-    >>> plaintext
-    'My secret plaintext data'
+```pycon
+>>> from SimpleAES import SimpleAES
+>>> key = 'Some arbitrary bytestring.'  # Store this somewhere safe
+>>> aes = SimpleAES(key)
+>>> ciphertext = aes.encrypt('My secret plaintext data')
+>>> ciphertext
+'U2FsdGVkX1/n2YDlhnMBHXxjyWT1fQ58lECKmC97Polz17mWCuLQmzJRzCtlWT29'
+>>> plaintext = aes.decrypt(ciphertext)
+>>> plaintext
+'My secret plaintext data'
+```
+
+
+### Compatibility notes
+
+**WARNING:** SimpleAES breaks compatibility with pre-1.0 releases.  
+It does so for good reasons, namely exchangability.  Before 1.0, strings
+encrypted with SimpleAES could only be decrypted with SimpleAES itself.  Since
+version 1.0, it's possible to decrypt string like the above on the command
+line, for example:
+
+```console
+$ echo 'U2FsdGVkX1/n2YDlhnMBHXxjyWT1fQ58lECKmC97Polz17mWCuLQmzJRzCtlWT29' | openssl enc -d -a -aes-256-cbc -pass pass:'Some arbitrary bytestring.'
+My secret plaintext data
+```
+
+Also, it's possible to send this data to another process or language and
+decrypt it there.  In short, the format is more standardized.
+
+You can convert all of your encrypted keys to the new format by decrypting and
+encrypting again with the same key.  Decryption will auto-detect the legacy
+format and use the old decryption technique.
+
+Example of converting legacy ciphertexts:
+
+```pycon
+>>> legacy_ciphertext = 'BAAAAAAAAABVCpqip59yhZE2zMmmhalthEsDnBaQ4XwAH4mkLL59kA=='
+>>> aes.encrypt(aes.decrypt(legacy_ciphertext))
+'U2FsdGVkX1/e8fspJOKoQLSejTumFj01YW1UgLPhrvAiM3A34bevVmmY7p+oNYOF\nwcpnPNmI6xyVKtjpVm+ElQ=='
+```
 
 
 ### Details
 
 You can use arbitrarily long keys.  Use a good random generator to generate one
-and store it safe.  _(For the technically inclined: a 256-bit hash is calculated
-from the input key and forms the actual encryption key.)_
+and store it safe.
 
 AES has a fixed block length (128 bits) and supports variable key sizes, but
 this library always uses AES-256, meaning 256-bit key sizes.
@@ -31,10 +61,9 @@ this library always uses AES-256, meaning 256-bit key sizes.
 
 ### Be warned!
 
-Only every use this library for encrypting/decrypting relatively *small pieces
-of text* (compared to available memory, that is).  It holds both the input and
-output strings in memory for the full length of the algorithm, so memory peaks
-may be an issue when used on large input strings.
+Only ever use this library for encrypting/decrypting relatively *small pieces
+of text*.  It is not optimized for encrypting streams of data, only in-memory
+strings.
 
 
 ## Installation
