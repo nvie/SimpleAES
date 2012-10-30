@@ -4,7 +4,8 @@ import struct
 import base64
 from StringIO import StringIO
 from Crypto.Cipher import AES
-from .version import VERSION
+from version import VERSION
+from padding import PKCS7Encoder
 
 __title__ = 'SimpleAES'
 __version__ = VERSION
@@ -29,11 +30,14 @@ class SimpleAES(object):
         iv = _random_noise(16)
         aes = AES.new(self._key, AES.MODE_CBC, iv)
 
-        fin = StringIO(string)
+        # Make a PKCS7-padded string, which is guaranteed to be decodeable
+        # without data loss
+        encoder = PKCS7Encoder(aes.block_size)
+        fin = StringIO(encoder.encode(string))
         fout = StringIO()
         try:
             # Fixed-length data encoded in the encrypted string, first
-            fout.write(struct.pack('<Q', len(string)))
+            # fout.write(struct.pack('<Q', len(string)))
             fout.write(iv)
 
             while True:
@@ -41,8 +45,6 @@ class SimpleAES(object):
                 chunk_len = len(chunk)
                 if chunk_len == 0:
                     break  # done
-                elif chunk_len % 16 != 0:
-                    chunk += _random_noise(16 - chunk_len % 16)
                 fout.write(aes.encrypt(chunk))
             cipherbytes = fout.getvalue()
         finally:
@@ -53,6 +55,54 @@ class SimpleAES(object):
 
     def decrypt(self, cipherbytes):
         """Decrypts a string using AES-256."""
+        fin = StringIO(cipherbytes)
+        fout = StringIO()
+        try:
+            iv = fin.read(16)
+            aes = AES.new(self._key, AES.MODE_CBC, iv)
+
+            while True:
+                chunk = fin.read(self.chunksize)
+                if len(chunk) == 0:
+                    break  # done
+                fout.write(aes.decrypt(chunk))
+
+            text = fout.getvalue()
+        finally:
+            fin.close()
+            fout.close()
+
+        # Unpad the padded string
+        encoder = PKCS7Encoder(aes.block_size)
+        return encoder.decode(text)
+
+    def base64_encrypt(self, string):
+        """Encrypts a string using AES-256, but returns the result
+        base64-encoded."""
+        cipherbytes = self.encrypt(string)
+        ciphertext = base64.b64encode(cipherbytes)
+        return ciphertext
+
+    def base64_decrypt(self, ciphertext):
+        """Decrypts base64-encoded ciphertext using AES-256."""
+        cipherbytes = base64.b64decode(ciphertext)
+        plaintext = self.decrypt(cipherbytes)
+        return plaintext
+
+    def convert(self, cipherbytes):
+        """Converts an old-style ciphertext into a new, PKCS7-padded, ciphertext."""
+        decrypted = self.decrypt_compat(cipherbytes)
+        encrypted = self.encrypt(decrypted)
+        assert self.decrypt(encrypted) == decrypted
+        return encrypted
+
+    def decrypt_compat(self, cipherbytes):
+        """Decrypts a string that's encoded with a SimpleAES version < 1.0.
+        To convert a ciphertext to the new-style algo, use:
+
+            aes = SimpleAES('my secret')
+            aes.convert(legacy_ciphertext)
+        """
         fin = StringIO(cipherbytes)
         fout = StringIO()
 
@@ -76,19 +126,6 @@ class SimpleAES(object):
             fout.close()
 
         return text
-
-    def base64_encrypt(self, string):
-        """Encrypts a string using AES-256, but returns the result
-        base64-encoded."""
-        cipherbytes = self.encrypt(string)
-        ciphertext = base64.b64encode(cipherbytes)
-        return ciphertext
-
-    def base64_decrypt(self, ciphertext):
-        """Decrypts base64-encoded ciphertext using AES-256."""
-        cipherbytes = base64.b64decode(ciphertext)
-        plaintext = self.decrypt(cipherbytes)
-        return plaintext
 
 
 __all__ = ['SimpleAES']
