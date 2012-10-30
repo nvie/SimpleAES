@@ -1,11 +1,11 @@
 import random
-import hashlib
 import struct
 import base64
+import hashlib
 from StringIO import StringIO
 from Crypto.Cipher import AES
-from version import VERSION
-from padding import PKCS7Encoder
+from .version import VERSION
+#from .exceptions import EncryptionError, DecryptionError
 
 __title__ = 'SimpleAES'
 __version__ = VERSION
@@ -14,67 +14,56 @@ __license__ = 'BSD'
 __copyright__ = 'Copyright 2012 Vincent Driessen'
 
 
+def check_output(cmd, input_=None, *popenargs, **kwargs):
+    """Custom variant of stdlib's check_output(), but with stdin feed support."""
+    from subprocess import Popen, PIPE, CalledProcessError
+    if 'stdout' in kwargs:
+        raise ValueError('stdout argument not allowed, it will be overridden.')
+    stdin = None
+    if input_ is not None:
+        stdin = PIPE
+    process = Popen(stdout=PIPE, stdin=stdin, *((cmd,) + popenargs), **kwargs)
+    output, unused_err = process.communicate(input_)
+    retcode = process.poll()
+    if retcode:
+        raise CalledProcessError(retcode, ' '.join(cmd), output=output)
+    return output
+
+
 def _random_noise(len):
     return ''.join(chr(random.randint(0, 0xFF)) for i in range(len))
 
 
 class SimpleAES(object):
-    def __init__(self, key):
+    def __init__(self, password):
         # First, generate a fixed-length key of 32 bytes (for AES-256)
-        self._key = hashlib.sha256(key).digest()
-        self.chunksize = 64 * 1024
+        self._password = password
 
     def encrypt(self, string):
         """Encrypts a string using AES-256."""
-        # Generate a random IV
-        iv = _random_noise(16)
-        aes = AES.new(self._key, AES.MODE_CBC, iv)
-
-        # Make a PKCS7-padded string, which is guaranteed to be decodeable
-        # without data loss
-        encoder = PKCS7Encoder(aes.block_size)
-        fin = StringIO(encoder.encode(string))
-        fout = StringIO()
         try:
-            # Fixed-length data encoded in the encrypted string, first
-            # fout.write(struct.pack('<Q', len(string)))
-            fout.write(iv)
+            envvar = hashlib.sha256(_random_noise(16)).hexdigest()
+            ciphertext = check_output([
+                'openssl', 'enc', '-e', '-aes-256-cbc', '-a',
+                '-salt', '-pass', 'env:{}'.format(envvar)],
+                input_=string,
+                env={envvar: self._password})
+            return ciphertext.strip()
+        except:
+            raise EncryptionError('Could not encrypt.')
 
-            while True:
-                chunk = fin.read(self.chunksize)
-                chunk_len = len(chunk)
-                if chunk_len == 0:
-                    break  # done
-                fout.write(aes.encrypt(chunk))
-            cipherbytes = fout.getvalue()
-        finally:
-            fin.close()
-            fout.close()
-
-        return cipherbytes
-
-    def decrypt(self, cipherbytes):
+    def decrypt(self, base64_cipherbytes):
         """Decrypts a string using AES-256."""
-        fin = StringIO(cipherbytes)
-        fout = StringIO()
         try:
-            iv = fin.read(16)
-            aes = AES.new(self._key, AES.MODE_CBC, iv)
-
-            while True:
-                chunk = fin.read(self.chunksize)
-                if len(chunk) == 0:
-                    break  # done
-                fout.write(aes.decrypt(chunk))
-
-            text = fout.getvalue()
-        finally:
-            fin.close()
-            fout.close()
-
-        # Unpad the padded string
-        encoder = PKCS7Encoder(aes.block_size)
-        return encoder.decode(text)
+            envvar = hashlib.sha256(_random_noise(16)).hexdigest()
+            plaintext = check_output([
+                'openssl', 'enc', '-d', '-aes-256-cbc', '-a', '-pass',
+                'env:{}'.format(envvar)],
+                input_=base64_cipherbytes + '\n',
+                env={envvar: self._password})
+            return plaintext
+        except:
+            raise DecryptionError('Could not decrypt.')
 
     def base64_encrypt(self, string):
         """Encrypts a string using AES-256, but returns the result
@@ -109,13 +98,15 @@ class SimpleAES(object):
         fin = StringIO(cipherbytes)
         fout = StringIO()
 
+        key = hashlib.sha256(self._password).digest()
+        chunksize = 64 * 1024
         try:
             input_size = struct.unpack('<Q', fin.read(struct.calcsize('Q')))[0]
             iv = fin.read(16)
-            aes = AES.new(self._key, AES.MODE_CBC, iv)
+            aes = AES.new(key, AES.MODE_CBC, iv)
 
             while True:
-                chunk = fin.read(self.chunksize)
+                chunk = fin.read(chunksize)
                 if len(chunk) == 0:
                     break  # done
                 fout.write(aes.decrypt(chunk))
