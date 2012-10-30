@@ -83,10 +83,13 @@ class SimpleAES(object):
         ciphertext = base64.b64encode(cipherbytes)
         return ciphertext
 
-    def base64_decrypt(self, ciphertext):
+    def base64_decrypt(self, ciphertext, legacy=False):
         """Decrypts base64-encoded ciphertext using AES-256."""
         cipherbytes = base64.b64decode(ciphertext)
-        plaintext = self.decrypt(cipherbytes)
+        if legacy:
+            plaintext = self.decrypt_compat(cipherbytes)
+        else:
+            plaintext = self.decrypt(cipherbytes)
         return plaintext
 
     def convert(self, cipherbytes):
