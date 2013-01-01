@@ -46,7 +46,7 @@ class SimpleAES(object):
             envvar = hashlib.sha256(_random_noise(16)).hexdigest()
             ciphertext = check_output([
                 'openssl', 'enc', '-e', '-aes-256-cbc', '-a',
-                '-salt', '-pass', 'env:{}'.format(envvar)],
+                '-salt', '-pass', 'env:{0}'.format(envvar)],
                 input_=string,
                 env={envvar: self._password})
             return ciphertext.strip()
@@ -63,7 +63,7 @@ class SimpleAES(object):
             envvar = hashlib.sha256(_random_noise(16)).hexdigest()
             plaintext = check_output([
                 'openssl', 'enc', '-d', '-aes-256-cbc', '-a', '-pass',
-                'env:{}'.format(envvar)],
+                'env:{0}'.format(envvar)],
                 input_=b64_ciphertext + '\n',
                 env={envvar: self._password})
             return plaintext
